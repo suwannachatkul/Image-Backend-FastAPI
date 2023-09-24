@@ -12,6 +12,10 @@ class ImageInfoBase(BaseModel):
     description: str
 
 
+class ImageInfoCreateQuery(BaseModel):
+    ext: Optional[str] = 'jpg'
+
+
 class ImageInfoCreate(ImageInfoBase):
     tags: List[str] = []
 

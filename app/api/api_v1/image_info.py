@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
+from slugify import slugify
 from starlette import status
 from sqlalchemy import Date, cast
 from sqlalchemy.orm import Session
@@ -64,6 +65,7 @@ def get_image_info(image_info_id: int, db: Session = Depends(session.get_db)):
 
 @router.post("/image/", response_model=image_schemas.ImageInfo, status_code=status.HTTP_201_CREATED)
 async def upload_image(
+    param: image_schemas.ImageInfoCreateQuery = Depends(),
     image_data: image_schemas.ImageInfoCreate = Body(...),
     file: UploadFile = File(...),
     db: Session = Depends(session.get_db),
@@ -74,16 +76,21 @@ async def upload_image(
 
         # size exceeded do resize
         if file_size > settings.MAX_IMG_SIZE:
-            img = ImageUtil.optimize_image_bytes_size(img_contents, 'jpg', settings.MAX_IMG_SIZE)
+            img = ImageUtil.optimize_image_bytes_size(img_contents, param.ext, settings.MAX_IMG_SIZE)
             img_contents = img.getbuffer()
             file_size = img_contents.nbytes
             img_meta = get_image_metadata_from_bytesio(img, file_size)
         else:
+            # size not exceeded but image ext needed to covert
+            if param.ext and not file.filename.endswith("." + param.ext):
+                converted_image = ImageUtil.convert_image_type(img_contents, param.ext)
+                img_contents = ImageUtil.PIL_to_bytes(converted_image, param.ext).getbuffer()
+
             file.file.seek(0)
             img_meta = get_image_metadata_from_bytesio(file.file, file_size)
 
         # Write the uploaded file's content to this path
-        image_name = file.filename.replace(file.filename.split(".")[-1], 'jpg', 1)
+        image_name = file.filename.replace(file.filename.split(".")[-1], param.ext, 1)
         image_path = os.path.join(settings.MEDIA_FOLDER, image_name)
         with open(image_path, "wb+") as buffer:
             buffer.write(img_contents)
@@ -100,10 +107,10 @@ async def upload_image(
 
         # Check each tag. If it doesn't exist, create it.
         for tag_data in image_data.tags:
-            tag_instance = db.query(models.Tag).filter_by(name=tag_data.name).first()
+            tag_instance = db.query(models.Tag).filter_by(name=tag_data).first()
 
             if not tag_instance:
-                tag_instance = models.Tag(name=tag_data.name, name_slug=slugify(tag_data.name))
+                tag_instance = models.Tag(name=tag_data, name_slug=slugify(tag_data))
                 db.add(tag_instance)
                 db.flush()
 
@@ -117,7 +124,6 @@ async def upload_image(
     except Exception as e:
         if os.path.exists(image_path):
             os.remove(image_path)
-        db.rollback()
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return new_image
