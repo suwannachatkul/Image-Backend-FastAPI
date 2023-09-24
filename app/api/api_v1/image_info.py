@@ -10,13 +10,19 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from app.core.config import settings
-from app.db import models, session
+from app.db import session
 from app.db.models import ImageInfo, Tag
 from app.schemas import image_info as image_schemas, tag as tag_schemas
 from app.utils.get_image_size import get_image_metadata_from_bytesio
 from app.utils.image_util import ImageUtil
 
 router = APIRouter()
+
+
+@router.get("/tags/", response_model=List[tag_schemas.Tag], status_code=status.HTTP_200_OK)
+def get_tags(db: Session = Depends(session.get_db)):
+    tags = db.query(Tag).all()
+    return tags
 
 
 @router.get("/image/", response_model=list[image_schemas.ImageInfo], status_code=status.HTTP_200_OK)
@@ -95,7 +101,7 @@ async def upload_image(
         with open(image_path, "wb+") as buffer:
             buffer.write(img_contents)
 
-        new_image = models.ImageInfo(
+        new_image = ImageInfo(
             image=image_path,
             title=image_data.title,
             description=image_data.description,
@@ -107,10 +113,10 @@ async def upload_image(
 
         # Check each tag. If it doesn't exist, create it.
         for tag_data in image_data.tags:
-            tag_instance = db.query(models.Tag).filter_by(name=tag_data).first()
+            tag_instance = db.query(Tag).filter_by(name=tag_data).first()
 
             if not tag_instance:
-                tag_instance = models.Tag(name=tag_data, name_slug=slugify(tag_data))
+                tag_instance = Tag(name=tag_data, name_slug=slugify(tag_data))
                 db.add(tag_instance)
                 db.flush()
 
