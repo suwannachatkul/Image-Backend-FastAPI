@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     DB_PORT: str = "5432"
     DB_NAME: str = "myimage_fastapi"
 
+    MAX_IMG_SIZE: int = 2 * 1024 * 1024  # 2MB as default
+    MEDIA_FOLDER: str = "app/media/"
+
     @property
     def DATABASE_URL(self):
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
