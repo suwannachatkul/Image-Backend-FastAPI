@@ -1,8 +1,7 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, func
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Table, func
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
-
 
 # Create an association table for many-to-many relationship between ImageInfo and Tag
 image_tags_association = Table(
@@ -10,6 +9,9 @@ image_tags_association = Table(
     Base.metadata,
     Column("image_id", Integer, ForeignKey("images.id")),
     Column("tag_id", Integer, ForeignKey("tags.id")),
+    Index("idx_image_id", "image_id"),
+    Index("idx_tag_id", "tag_id"),
+    Index("idx_image_tag", "image_id", "tag_id"),
 )
 
 
@@ -29,7 +31,7 @@ class ImageInfo(Base):
     id = Column(Integer, primary_key=True, index=True)
     image = Column(String)
     title = Column(String(255), index=True)
-    description = Column(String, index=True)
+    description = Column(String)
     height = Column(Integer)
     width = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
