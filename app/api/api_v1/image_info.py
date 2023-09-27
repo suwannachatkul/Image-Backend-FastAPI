@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
-from typing import List
+from typing import Dict, List
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile, Request
+from pydantic import ValidationError
 from slugify import slugify
 from starlette import status
 from sqlalchemy import Date, cast
@@ -16,7 +17,17 @@ from app.schemas import image_info as image_schemas, tag as tag_schemas
 from app.utils.get_image_size import get_image_metadata_from_bytesio
 from app.utils.image_util import ImageUtil
 
+
 router = APIRouter()
+
+
+def get_or_create_tag(db: Session, tag_name: str) -> Tag:
+    tag_instance = db.query(Tag).filter_by(name=tag_name).first()
+    if not tag_instance:
+        tag_instance = Tag(name=tag_name, name_slug=slugify(tag_name))
+        db.add(tag_instance)
+        db.flush()
+    return tag_instance
 
 
 @router.get("/tags/", response_model=List[tag_schemas.Tag], status_code=status.HTTP_200_OK)
@@ -113,17 +124,10 @@ async def upload_image(
 
         # Check each tag. If it doesn't exist, create it.
         for tag_data in image_data.tags:
-            tag_instance = db.query(Tag).filter_by(name=tag_data).first()
-
-            if not tag_instance:
-                tag_instance = Tag(name=tag_data, name_slug=slugify(tag_data))
-                db.add(tag_instance)
-                db.flush()
-
+            tag_instance = get_or_create_tag(db, tag_data)
             new_image.tags.append(tag_instance)
 
         db.commit()
-
 
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -133,3 +137,40 @@ async def upload_image(
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return new_image
+
+
+@router.patch("/image/{image_info_id}/", response_model=image_schemas.ImageInfo, status_code=status.HTTP_200_OK)
+def update_image_info(
+    image_info_id: int, update_data: image_schemas.ImageInfoUpdate, db: Session = Depends(session.get_db)
+):
+    image = db.query(ImageInfo).filter(ImageInfo.id == image_info_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    if update_data.title is not None:
+        image.title = update_data.title
+    if update_data.description is not None:
+        image.description = update_data.description
+
+    if update_data.tags is not None:
+        image.tags = []
+
+        for tag_data in update_data.tags:
+            tag_instance = get_or_create_tag(db, tag_data)
+            image.tags.append(tag_instance)
+
+    db.commit()
+
+    return image
+
+
+@router.delete("/image/{image_info_id}/", status_code=status.HTTP_204_NO_CONTENT)
+def delete_image_info(image_info_id: int, db: Session = Depends(session.get_db)):
+    image = db.query(ImageInfo).filter(ImageInfo.id == image_info_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    db.delete(image)
+    db.commit()
+
+    return None
