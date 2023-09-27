@@ -10,7 +10,7 @@ from .tag import TagBase
 class ImageInfoBase(BaseModel):
     image: str
     title: str
-    description: str
+    description: str = None
 
 
 class ImageInfoCreateQuery(BaseModel):
@@ -48,7 +48,6 @@ class ImageInfo(ImageInfoBase):
 class ImageInfoFilters(BaseModel):
     offset: Optional[int] = 0
     limit: Optional[int] = None
-    tags: Optional[List[str]] = None
     created_date: Optional[str] = None
     created_date__after: Optional[str] = None
     created_date__before: Optional[str] = None

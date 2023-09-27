@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict, List
+from typing import Annotated ,Dict, List
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile, Request
 from pydantic import ValidationError
@@ -39,13 +39,14 @@ def get_tags(db: Session = Depends(session.get_db)):
 @router.get("/image/", response_model=list[image_schemas.ImageInfo], status_code=status.HTTP_200_OK)
 def get_image_infos(
     param: image_schemas.ImageInfoFilters = Depends(),
+    tags: List[str] = Query(default=None),
     db: Session = Depends(session.get_db),
 ):
     query = db.query(ImageInfo)
 
     # Filter by tags
-    if param.tags:
-        query = query.join(ImageInfo.tags).filter(Tag.name.in_(param.tags))
+    if tags:
+        query = query.join(ImageInfo.tags).filter(Tag.name.in_(tags))
 
     # Filter by created_date, created_date__after, and created_date__before
     if param.created_date:
