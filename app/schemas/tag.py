@@ -9,6 +9,7 @@ class TagCreate(TagBase):
 
 class Tag(TagBase):
     id: int
+    name_slug: str
 
     class Config:
         from_attributes = True
