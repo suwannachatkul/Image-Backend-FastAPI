@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
-from typing import Annotated ,Dict, List
+import logging
+from typing import Annotated, Dict, List
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile, Request
 from pydantic import ValidationError
@@ -18,6 +19,8 @@ from app.utils.get_image_size import get_image_metadata_from_bytesio, UnknownIma
 from app.utils.image_util import ImageUtil
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -27,6 +30,7 @@ def get_or_create_tag(db: Session, tag_name: str) -> Tag:
         tag_instance = Tag(name=tag_name, name_slug=slugify(tag_name))
         db.add(tag_instance)
         db.flush()
+        logger.info(f"New tag created: {tag_name}")
     return tag_instance
 
 
@@ -77,6 +81,7 @@ def get_image_infos(
 def get_image_info(image_info_id: int, db: Session = Depends(session.get_db)):
     image = db.query(ImageInfo).filter(ImageInfo.id == image_info_id).first()
     if not image:
+        logger.warning(f"Image with id {image_info_id} not found")
         raise HTTPException(status_code=404, detail="Image not found")
     return image
 
@@ -130,12 +135,16 @@ async def upload_image(
             new_image.tags.append(tag_instance)
 
         db.commit()
+        logger.info(f"New image uploaded: ID={new_image.id}, Title={new_image.title}, Path={new_image.image}, Size={file_size}, Tags={[tag.name for tag in new_image.tags]}")
 
     except ValueError as ve:
+        logger.error(f"Value error on image upload: {ve}")
         raise HTTPException(status_code=400, detail=str(ve))
     except UnknownImageFormat as ue:
+        logger.error(f"Unknown image format on upload: {ue}")
         raise HTTPException(status_code=400, detail="Invalid file")
     except Exception as e:
+        logger.error(f"Unexpected error on image upload: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return new_image
@@ -147,6 +156,7 @@ def update_image_info(
 ):
     image = db.query(ImageInfo).filter(ImageInfo.id == image_info_id).first()
     if not image:
+        logger.warning(f"Attempt to update non-existent image with id {image_info_id}")
         raise HTTPException(status_code=404, detail="Image not found")
 
     if update_data.title is not None:
@@ -162,6 +172,7 @@ def update_image_info(
             image.tags.append(tag_instance)
 
     db.commit()
+    logger.info(f"Image updated: ID={image_info_id}, Title={image.title}, Description={image.description}, Tags={[tag.name for tag in image.tags]}")
 
     return image
 
@@ -170,9 +181,11 @@ def update_image_info(
 def delete_image_info(image_info_id: int, db: Session = Depends(session.get_db)):
     image = db.query(ImageInfo).filter(ImageInfo.id == image_info_id).first()
     if not image:
+        logger.warning(f"Attempt to delete non-existent image with id {image_info_id}")
         raise HTTPException(status_code=404, detail="Image not found")
 
     db.delete(image)
     db.commit()
+    logger.info(f"Image deleted: ID={image_info_id}, Path={image.image}")
 
     return None
