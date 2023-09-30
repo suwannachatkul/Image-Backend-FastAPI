@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     DB_NAME: str = "myimage_fastapi"
 
     MAX_IMG_SIZE: int = 2 * 1024 * 1024  # 2MB as default
-    MEDIA_FOLDER: str = "app/media/"
+    MEDIA_FOLDER: str = Field("app/media/")
 
     @property
     def DATABASE_URL(self):
