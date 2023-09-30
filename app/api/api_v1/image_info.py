@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.db import session
 from app.db.models import ImageInfo, Tag
 from app.schemas import image_info as image_schemas, tag as tag_schemas
-from app.utils.get_image_size import get_image_metadata_from_bytesio
+from app.utils.get_image_size import get_image_metadata_from_bytesio, UnknownImageFormat
 from app.utils.image_util import ImageUtil
 
 
@@ -119,6 +119,7 @@ async def upload_image(
             description=image_data.description,
             height=img_meta.height,
             width=img_meta.width,
+            file_size=file_size,
         )
         db.add(new_image)
         db.flush()
@@ -132,9 +133,9 @@ async def upload_image(
 
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
+    except UnknownImageFormat as ue:
+        raise HTTPException(status_code=400, detail="Invalid file")
     except Exception as e:
-        if os.path.exists(image_path):
-            os.remove(image_path)
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return new_image
