@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import logging
+import traceback
 from typing import Annotated, Dict, List
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile, Request
@@ -144,7 +145,8 @@ async def upload_image(
         logger.error(f"Unknown image format on upload: {ue}")
         raise HTTPException(status_code=400, detail="Invalid file")
     except Exception as e:
-        logger.error(f"Unexpected error on image upload: {e}")
+        error_info = traceback.format_exc()
+        logger.error(f"Unexpected error on image upload:\n{error_info}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return new_image
