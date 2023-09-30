@@ -116,6 +116,8 @@ async def upload_image(
         # Write the uploaded file's content to this path
         image_name = file.filename.replace(file.filename.split(".")[-1], param.ext, 1)
         image_path = os.path.join(settings.MEDIA_FOLDER, image_name)
+        if not os.path.exists(settings.MEDIA_FOLDER):
+            os.mkdir(settings.MEDIA_FOLDER)
         with open(image_path, "wb+") as buffer:
             buffer.write(img_contents)
 
