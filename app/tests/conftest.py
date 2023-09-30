@@ -8,7 +8,7 @@ from app.db.base_class import Base
 from app.db import session
 
 
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:10475@localhost:5432/myimage_fastapi_test"
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:XXXXX@localhost:5432/myimage_fastapi_test"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=engine)
 
