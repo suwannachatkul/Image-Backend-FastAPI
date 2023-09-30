@@ -8,7 +8,6 @@ from .tag import TagBase
 
 
 class ImageInfoBase(BaseModel):
-    image: str
     title: str
     description: str = None
 
@@ -38,6 +37,7 @@ class ImageInfo(ImageInfoBase):
     id: int
     height: int
     width: int
+    file_size: int
     created_at: datetime
     tags: List[TagBase] = []
 
