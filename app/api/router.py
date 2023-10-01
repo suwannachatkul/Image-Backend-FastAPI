@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
-from app.api.api_v1 import image_info, tags
+from app.api.image import image_info
+from app.api.tag import tags
 
 router = APIRouter()
 
