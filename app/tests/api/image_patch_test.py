@@ -62,3 +62,20 @@ class TestPatchImageAPI:
         assert len(new_data.tags) == 1
         assert new_data.tags[0].name != old_data_dict["tags"][0].name
         assert new_data.tags[0].name == "test_tag1"
+
+    def test_patch_notexist(self, test_client, test_db_session):
+        image_data_payload = {
+            "title": "test_image",
+            "description": "test description",
+            "tags": ["test_tag1"],
+        }
+        image_data_str = json.dumps(image_data_payload)
+
+        response = test_client.patch(
+            "image_api/image/99999/",
+            json=image_data_payload,
+        )
+
+        response_data = response.json()
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+

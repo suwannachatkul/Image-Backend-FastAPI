@@ -19,7 +19,7 @@ class TestGetTagAPI:
         test_db_session.commit()
 
     def test_get_all_tags(self, test_client):
-        response = test_client.get("image_api/tags/")
+        response = test_client.get("image_api/tag/tags")
 
         assert response.status_code == status.HTTP_200_OK
         assert isinstance(response.json(), list)
